@@ -1,4 +1,7 @@
 numpy>=1.24
 h5py>=3.8
+# Chat history in PostgreSQL (only used when DATABASE is set in the environment or .env).
+psycopg[binary]>=3.1
+psycopg-pool>=3.2
 # Optional: run the model with TensorFlow/Keras instead of NumPy (same answers).
 # tensorflow>=2.15

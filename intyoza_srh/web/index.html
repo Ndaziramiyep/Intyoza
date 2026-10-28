@@ -48,6 +48,14 @@
   .topic-qs.open { display: block; }
   .topic-qs button { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--muted); font-size: .88em; padding: 4px 6px; border-radius: 6px; }
   .topic-qs button:hover { color: var(--fg); background: var(--brand-soft); }
+  .chat-item { display: flex; align-items: center; border-radius: 8px; }
+  .chat-item:hover, .chat-item.active { background: var(--brand-soft); }
+  .chat-item .open-chat { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 7px 10px; font-size: .9em;
+                          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-item .del { flex: none; border: 0; background: none; color: var(--muted); padding: 4px 8px; border-radius: 6px; visibility: hidden; }
+  .chat-item:hover .del, .chat-item.active .del, .chat-item .del:focus-visible { visibility: visible; }
+  .chat-item .del:hover { color: var(--fg); }
+  @media (hover: none) { .chat-item .del { visibility: visible; } }
   .help { margin: 10px; padding: 12px; border: 1px solid var(--warn-line); background: var(--warn-bg); border-radius: 10px; font-size: .85em; }
   .help strong { display: block; margin-bottom: 4px; }
   .help a { color: inherit; font-weight: 600; }
@@ -133,6 +141,10 @@
       </button>
     </div>
     <div class="side-scroll">
+      <div id="recentWrap" hidden>
+        <div class="side-label">Recent chats</div>
+        <nav id="recent" aria-label="Recent chats"></nav>
+      </div>
       <div class="side-label">Browse topics</div>
       <nav id="topics" aria-label="Topics"></nav>
     </div>
@@ -172,7 +184,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         </button>
       </form>
-      <div class="foot">Intyoza gives general health information and does not replace a health worker. We do not ask your name and do not save your questions.</div>
+      <div class="foot" id="foot">Intyoza gives general health information and does not replace a health worker. We do not ask your name and do not save your questions.</div>
     </div>
   </main>
 </div>
@@ -198,7 +210,22 @@
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
   };
+
+  // chat history: a random id for this browser (no name), and the chat that is open
+  function newId() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = b[6] & 15 | 64; b[8] = b[8] & 63 | 128;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+  let clientId = store.get("intyoza-client");
+  if (!clientId) { clientId = newId(); store.set("intyoza-client", clientId); }
+  let convId = store.get("intyoza-conv");
+  let historyOn = false;
+  const setConv = (id) => { convId = id; if (id) store.set("intyoza-conv", id); else store.del("intyoza-conv"); };
+  const api = (path, opts = {}) => fetch(API + path, { ...opts, headers: { "X-Client-Id": clientId, ...(opts.headers || {}) } });
 
   function el(tag, cls, text) {
     const n = document.createElement(tag);
@@ -301,17 +328,63 @@
     const started = Date.now();
     let r;
     try {
-      const res = await fetch(API + "/api/chat", {
+      const res = await api("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isTitle ? { title: text } : { message: text }),
+        body: JSON.stringify({ ...(isTitle ? { title: text } : { message: text }), conversation_id: convId }),
       });
       r = await res.json();
       if (!res.ok) throw new Error(r.error || "error");
+      if (r.conversation_id) { setConv(r.conversation_id); loadRecent(); }
     } catch (e) {
       r = { type: "error", answer: "Sorry, I could not connect. Please check your connection and try again. If you need help now, call 114 (health) or 112 (emergency)." };
     }
     const wait = Math.max(0, 450 - (Date.now() - started));   // short pause so the reply feels natural
     setTimeout(() => { addBot(r); busy = false; send.disabled = !q.value.trim(); q.focus(); }, wait);
+  }
+
+  async function loadRecent() {
+    try {
+      const data = await (await api("/api/conversations")).json();
+      historyOn = !!data.history;
+      if (historyOn) {
+        $("foot").textContent = "Intyoza gives general health information and does not replace a health worker. "
+          + "We do not ask your name. Your chats are saved without it so you can come back to them; delete any chat with ×.";
+      }
+      const nav = $("recent");
+      nav.innerHTML = "";
+      for (const c of data.conversations || []) {
+        const row = el("div", "chat-item" + (c.id === convId ? " active" : ""));
+        const open = el("button", "open-chat", c.title || "Chat"); open.type = "button"; open.title = c.title;
+        open.onclick = () => openConversation(c.id);
+        const del = el("button", "del", "×"); del.type = "button"; del.setAttribute("aria-label", "Delete chat: " + c.title);
+        del.onclick = async () => {
+          if (!confirm("Delete this chat? This cannot be undone.")) return;
+          try { await api("/api/conversations/" + c.id, { method: "DELETE" }); } catch {}
+          if (c.id === convId) { setConv(null); welcome(); }
+          loadRecent();
+        };
+        row.append(open, del);
+        nav.append(row);
+      }
+      $("recentWrap").hidden = !nav.children.length;
+    } catch {}
+  }
+
+  async function openConversation(id) {
+    if (busy) return;
+    closeMenu(); speechSynthesis?.cancel?.();
+    try {
+      const res = await api("/api/conversations/" + id);
+      if (!res.ok) throw new Error("not found");
+      const data = await res.json();
+      setConv(id);
+      thread.innerHTML = "";
+      for (const m of data.messages) m.role === "user" ? addUser(m.text) : addBot(m.reply);
+      if (!data.messages.length) welcome();
+    } catch {
+      setConv(null); welcome();
+    }
+    loadRecent();
   }
 
   async function loadTopics() {
@@ -340,7 +413,7 @@
   q.addEventListener("input", () => { grow(); send.disabled = busy || !q.value.trim(); });
   q.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(q.value); } });
   $("form").addEventListener("submit", (e) => { e.preventDefault(); ask(q.value); });
-  $("newChat").onclick = () => { speechSynthesis?.cancel?.(); welcome(); closeMenu(); q.focus(); };
+  $("newChat").onclick = () => { speechSynthesis?.cancel?.(); setConv(null); welcome(); loadRecent(); closeMenu(); q.focus(); };
 
   // mobile menu
   const side = $("sidebar"), scrim = $("scrim"), menu = $("menu");
@@ -367,6 +440,7 @@
   };
 
   applyFs(); welcome(); loadTopics(); q.focus();
+  if (convId) openConversation(convId); else loadRecent();
 })();
 </script>
 </body>

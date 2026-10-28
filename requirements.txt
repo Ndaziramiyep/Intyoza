@@ -16,3 +16,7 @@ tensorflow-cpu>=2.15,<2.17
 h5py>=3.8
 huggingface_hub>=0.20     # downloads the pretrained sentence encoder once (all-MiniLM-L6-v2)
 safetensors>=0.4
+
+# Chat history in PostgreSQL (intyoza_srh/history.py; only used when DATABASE is set)
+psycopg[binary]>=3.1
+psycopg-pool>=3.2
