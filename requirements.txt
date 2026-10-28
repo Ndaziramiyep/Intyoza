@@ -1,0 +1,18 @@
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+joblib>=1.3
+fastapi>=0.110
+uvicorn>=0.27
+pytest>=7.4
+httpx>=0.26
+# Optional (Day 6, better matching). Downloads the model once, then runs offline:
+# sentence-transformers>=2.6
+
+# Keras chatbot model (src/train_keras.py -> intyoza_srh/model/intyoza_srh_model.h5).
+# TensorFlow needs Python 3.9-3.12 (on Windows: py -3.11 -m venv .venv).
+tensorflow-cpu>=2.15,<2.17
+h5py>=3.8
+huggingface_hub>=0.20     # downloads the pretrained sentence encoder once (all-MiniLM-L6-v2)
+safetensors>=0.4
