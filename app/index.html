@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intyoza: ask a health question</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1b1f23; --muted:#555d66; --brand:#1f6f5c; --card:#eef6f3; --border:#b9d3ca; --warn:#fff4e5; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#14181b; --fg:#eef1f3; --muted:#b2bac2; --brand:#5fc2a6; --card:#1c2a26; --border:#2f4a42; --warn:#2b2418; } }
+  body.contrast { --bg:#000; --fg:#fff; --muted:#fff; --brand:#ffd800; --card:#000; --border:#fff; --warn:#000; }
+  html { font-size: 100%; }
+  body { margin:0; font-family: system-ui, Arial, sans-serif; background:var(--bg); color:var(--fg); line-height:1.6; }
+  main { max-width: 42rem; margin: 0 auto; padding: 1rem; }
+  h1 { color:var(--brand); margin:.5rem 0; }
+  .tools { display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
+  button { font:inherit; padding:.6rem 1rem; border-radius:.5rem; border:2px solid var(--brand); background:var(--brand); color:#fff; cursor:pointer; }
+  body.contrast button { color:#000; }
+  button.secondary { background:transparent; color:var(--brand); }
+  textarea { width:100%; box-sizing:border-box; font:inherit; padding:.75rem; border:2px solid var(--border); border-radius:.5rem; background:var(--bg); color:var(--fg); }
+  #answer { margin-top:1rem; padding:1rem; border:2px solid var(--border); border-radius:.5rem; background:var(--card); white-space:pre-wrap; display:none; }
+  #answer.safe { background:var(--warn); }
+  small, .note { color:var(--muted); }
+  :focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Intyoza</h1>
+  <p>Ask a question about growing up, periods, relationships, contraception, pregnancy, STIs or HIV. Nobody will judge you.</p>
+  <div class="tools" role="group" aria-label="Display options">
+    <button class="secondary" id="bigger" type="button" aria-label="Increase text size">A+</button>
+    <button class="secondary" id="smaller" type="button" aria-label="Decrease text size">A-</button>
+    <button class="secondary" id="contrast" type="button" aria-pressed="false">High contrast</button>
+  </div>
+  <label for="q"><strong>Your question</strong></label>
+  <textarea id="q" rows="3" maxlength="500" placeholder="Type your question here"></textarea>
+  <div class="tools">
+    <button id="send" type="button">Get answer</button>
+    <button class="secondary" id="speak" type="button">Read answer aloud</button>
+  </div>
+  <div id="answer" role="status" aria-live="polite"></div>
+  <p class="note" id="disc"></p>
+  <p><small>We do not ask your name and do not save your questions. This does not replace a health worker.</small></p>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  let size = 100;
+  $("bigger").onclick  = () => { size = Math.min(160, size + 10); document.documentElement.style.fontSize = size + "%"; };
+  $("smaller").onclick = () => { size = Math.max(80, size - 10);  document.documentElement.style.fontSize = size + "%"; };
+  $("contrast").onclick = e => { const on = document.body.classList.toggle("contrast"); e.target.setAttribute("aria-pressed", on); };
+  $("send").onclick = async () => {
+    const q = $("q").value.trim(); if (!q) return;
+    $("send").disabled = true;
+    try {
+      const r = await fetch("/ask", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ question: q }) });
+      const d = await r.json();
+      const box = $("answer");
+      box.textContent = d.answer;            // textContent: never inject HTML
+      box.className = d.type === "safe" ? "safe" : "";
+      box.style.display = "block";
+      $("disc").textContent = d.disclaimer || "";
+      box.focus();
+    } catch (err) {
+      $("answer").textContent = "Sorry, something went wrong. Please try again or visit your nearest health center.";
+      $("answer").style.display = "block";
+    }
+    $("send").disabled = false;
+  };
+  $("speak").onclick = () => {
+    const t = $("answer").textContent; if (!t || !("speechSynthesis" in window)) return;
+    speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+  };
+</script>
+</body>
+</html>
