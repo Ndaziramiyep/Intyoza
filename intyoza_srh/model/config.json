@@ -1,0 +1,95 @@
+{
+  "answer_threshold": 0.65,
+  "suggest_threshold": 0.217,
+  "safe_min_prob": {
+    "self_harm": 0.2,
+    "abuse_disclosure": 0.2,
+    "medical_emergency": 0.3,
+    "diagnosis_request": 0.3
+  },
+  "safe_min_prob_when_unsure": {
+    "self_harm": 0.02,
+    "abuse_disclosure": 0.02,
+    "medical_emergency": 0.02,
+    "diagnosis_request": 0.02
+  },
+  "offtopic_min_prob": 0.6,
+  "require_reviewed": false,
+  "starter_questions": [
+    "What is a period",
+    "Pregnancy the first time and every time",
+    "HIV testing",
+    "What is consent",
+    "Emergency contraceptive pills",
+    "Signs of an STI"
+  ],
+  "intents": [
+    "srh_question",
+    "off_topic",
+    "self_harm",
+    "abuse_disclosure",
+    "medical_emergency",
+    "diagnosis_request"
+  ],
+  "search": {
+    "classifier_weight": 0.7,
+    "temperature": 0.04,
+    "k": 5,
+    "floor": 0.45,
+    "margin": 0.0,
+    "min_model_prob": 0.002,
+    "strong_gap": 0.05,
+    "suggest_min_similarity": 0.35
+  },
+  "calibration": [
+    [
+      0.2133,
+      0.232
+    ],
+    [
+      0.328,
+      0.352
+    ],
+    [
+      0.4179,
+      0.488
+    ],
+    [
+      0.5002,
+      0.608
+    ],
+    [
+      0.5802,
+      0.616
+    ],
+    [
+      0.6525,
+      0.648
+    ],
+    [
+      0.7191,
+      0.752
+    ],
+    [
+      0.7819,
+      0.824
+    ],
+    [
+      0.8466,
+      0.824
+    ],
+    [
+      0.9105,
+      0.92
+    ],
+    [
+      0.9552,
+      0.92
+    ],
+    [
+      0.9895,
+      0.936
+    ]
+  ],
+  "guess_threshold": 0.5
+}

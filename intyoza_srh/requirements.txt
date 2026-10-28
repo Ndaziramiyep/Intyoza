@@ -1,0 +1,4 @@
+numpy>=1.24
+h5py>=3.8
+# Optional: run the model with TensorFlow/Keras instead of NumPy (same answers).
+# tensorflow>=2.15
