@@ -1,0 +1,11 @@
+
+*.env
+*.pyc
+.env
+.pytest_cache/
+.venv/
+__pycache__/
+dist/
+models/*.joblib
+models/*.npz
+intyoza_srh/model/*.h5
